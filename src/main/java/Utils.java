@@ -55,6 +55,9 @@ public class Utils {
                 break;
             }
             for (Character c : cache.get(character)) {
+                if (c == '#') {
+                    continue;
+                }
                 if (cacheList.contains(c)) {
                     flag++;
                 }
@@ -69,23 +72,29 @@ public class Utils {
     public HashMap<Character, HashSet<Character>> getFollow(ArrayList<Grammar> list, HashSet<Character> nonTerminal, HashMap<Character, HashSet<Character>> firstSet) {
         HashMap<Character, HashSet<Character>> res = new HashMap<>();
         HashMap<Character, HashSet<Character>> cache = new HashMap<>();
-        HashSet<Character> cacheList = new HashSet<>();
         while (res.size() != nonTerminal.size()){
+            System.out.println(res.size());
             for (Character c:nonTerminal) {
                 for (Grammar grammar:list) {
-                    int position = grammar.left.indexOf(c);
+                    int position = grammar.right.indexOf(c);
                     if (position != -1) {
                         cache.computeIfAbsent(c, k -> new HashSet<>());
-                        while (position < grammar.left.length()) {
-                            if (position == grammar.left.length()-1) {
-                                cache.get(c).add(grammar.left.charAt(0));
+                        while (position < grammar.right.length()) {
+                            if (position == grammar.right.length()-1) {
+                                if (c != grammar.left.charAt(0)) {
+                                    if (res.containsKey(grammar.left.charAt(0))) {
+                                        if (c == 'G') System.out.println(grammar.right+" rrr");
+                                        cache.get(c).addAll(res.get(grammar.left.charAt(0)));
+                                    }
+                                    cache.get(c).add(grammar.left.charAt(0));
+                                }
                                 break;
                             }
-                            if (!nonTerminal.contains(grammar.left.charAt(position+1))) {
-                                cache.get(c).add(grammar.left.charAt(position+1));
+                            if (!nonTerminal.contains(grammar.right.charAt(position+1))) {
+                                cache.get(c).add(grammar.right.charAt(position+1));
                                 break;
                             } else {
-                                HashSet<Character> first = firstSet.get(grammar.left.charAt(position));
+                                HashSet<Character> first = firstSet.get(grammar.right.charAt(position+1));
                                 cache.get(c).addAll(first);
                                 if (first.contains('$')) {
                                     cache.get(c).remove('$');
@@ -98,7 +107,8 @@ public class Utils {
                     }
                 }
             }
-            check();
+            cache.get('E').add('#');
+            check(nonTerminal, res, cache);
         }
 
         return res;
