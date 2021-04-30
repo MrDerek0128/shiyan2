@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Stack;
 
 public class Utils {
     public HashMap<Character, HashSet<Character>> getFirst(ArrayList<Grammar> list, HashSet<Character> nonTerminal) {
@@ -73,7 +74,6 @@ public class Utils {
         HashMap<Character, HashSet<Character>> res = new HashMap<>();
         HashMap<Character, HashSet<Character>> cache = new HashMap<>();
         while (res.size() != nonTerminal.size()){
-            System.out.println(res.size());
             for (Character c:nonTerminal) {
                 for (Grammar grammar:list) {
                     int position = grammar.right.indexOf(c);
@@ -83,8 +83,8 @@ public class Utils {
                             if (position == grammar.right.length()-1) {
                                 if (c != grammar.left.charAt(0)) {
                                     if (res.containsKey(grammar.left.charAt(0))) {
-                                        if (c == 'G') System.out.println(grammar.right+" rrr");
                                         cache.get(c).addAll(res.get(grammar.left.charAt(0)));
+                                        break;
                                     }
                                     cache.get(c).add(grammar.left.charAt(0));
                                 }
@@ -112,6 +112,91 @@ public class Utils {
         }
 
         return res;
+    }
+
+    public HashMap<Grammar, HashSet<Character>> getSelect(ArrayList<Grammar> list, HashSet<Character> nonTerminal, HashMap<Character, HashSet<Character>> firstSet, HashMap<Character, HashSet<Character>> followSet) {
+        HashMap<Grammar, HashSet<Character>> res = new HashMap<>();
+        for (Grammar grammar:list) {
+            res.put(grammar,new HashSet<>());
+            for (int i = 0; i < grammar.right.length(); i++) {
+                if (!nonTerminal.contains(grammar.right.charAt(i)) && grammar.right.charAt(i)!='$') {
+                    res.get(grammar).add(grammar.right.charAt(i));
+                    break;
+                } else {
+                    if (grammar.right.charAt(i) == '$') {
+                        res.get(grammar).addAll(followSet.get(grammar.left.charAt(0)));
+                        break;
+                    }
+                    res.get(grammar).addAll(firstSet.get(grammar.right.charAt(i)));
+                    if (!firstSet.get(grammar.right.charAt(i)).contains('$')) {
+                        break;
+                    }
+                    if (i == grammar.right.length() - 1) {
+                        res.get(grammar).addAll(followSet.get(grammar.left.charAt(0)));
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    public HashMap<String,String> getForm(HashMap<Grammar, HashSet<Character>> selectSet) {
+        HashMap<String,String> res = new HashMap<>();
+        res.put("error","0");
+        for (Grammar grammar:selectSet.keySet()) {
+            for (Character character:selectSet.get(grammar)) {
+                String key = grammar.left.charAt(0)+""+character;
+                if (res.containsKey(key)) {
+                    res.replace("error","1");
+                    return res;
+                }
+                res.put(key,grammar.right);
+            }
+        }
+        return res;
+    }
+
+    public void result(String s, HashMap<String,String> form, HashSet<Character> nonTerminal) {
+        Stack<Character> analyse = new Stack<>();
+        Stack<Character> input = new Stack<>();
+        analyse.push('#');
+        analyse.push('E');
+        input.push('#');
+        StringBuilder aStack = new StringBuilder("#E");
+        StringBuilder iStack = new StringBuilder("#");
+        for (int i = s.length()-1; i >= 0; i--) {
+            iStack.append(s.charAt(i));
+            input.push(s.charAt(i));
+        }
+        System.out.println("分析式"+"   "+"剩余输入串"+"   "+"所用产生式");
+        while (true) {
+            if (analyse.peek().equals('#') && input.peek().equals('#')) {
+                System.out.println(aStack+"   "+iStack+"   "+"接受");
+                break;
+            }
+            if (nonTerminal.contains(analyse.peek())) {
+                String key = analyse.peek()+""+input.peek();
+                String in = form.get(key);
+                System.out.println(aStack+"   "+iStack+"   "+analyse.peek()+"->"+form.get(key));
+                aStack.delete(aStack.length()-1,aStack.length());
+                analyse.pop();
+                if ("$".equals(form.get(key))){
+                    continue;
+                }
+                for (int i = in.length()-1; i >= 0; i--) {
+                    aStack.append(in.charAt(i));
+                    analyse.push(in.charAt(i));
+                }
+            } else {
+                if (analyse.peek().equals(input.peek()) ) {
+                    System.out.println(aStack+"   "+iStack+"   "+input.peek()+"匹配");
+                    aStack.delete(aStack.length()-1,aStack.length());
+                    iStack.delete(iStack.length()-1,iStack.length());
+                    analyse.pop();
+                    input.pop();
+                }
+            }
+        }
     }
 
 }
